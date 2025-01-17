@@ -20,7 +20,7 @@ class ConvBlock(nn.Module):
 
 def ConvBlockFunction(x,w,b,w_bn,b_bn):
     x=F.conv2d(x,w,b,1,1)
-    x=F.batch_norm(x,w_bn,b_bn,running_mean=None,running_var=None,training=True)
+    x=F.batch_norm(x,running_mean=None,running_var=None,weight=w_bn,bias=b_bn,training=True)
     x=F.relu(x)
-    x=F.maxpool2d(x,2,2)
+    x=F.max_pool2d(x,2,2)
     return x

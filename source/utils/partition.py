@@ -108,7 +108,7 @@ def save_dict(data, save_path):
         None
     """
     with open(save_path, 'wb') as f:
-        f.write(pickle.dumps(data.client_dict))
+        f.write(pickle.dumps(data))
 
 
 def load_dict(load_path):
@@ -144,3 +144,5 @@ def set_partition(datasets: torchvision.datasets.mnist.MNIST, client_dict: dict)
     for key, value in client_dict.items():
         client_data[key] = (datas[value], targets[value])
     return client_data
+
+
