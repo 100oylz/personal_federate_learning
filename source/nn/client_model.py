@@ -42,13 +42,24 @@ def client_train(model:client_model, train_loader, optimizer, criterion, device,
     batch_loss=0
     batch_acc=0
     torch.cuda.empty_cache()
-    model.to(device)
-    criterion.to(device)
+    model=model.to(device)
+    criterion=criterion.to(device)
+    for param in model.fd_model.parameters():
+        param.requires_grad=True
+    for param in model.logit.parameters():
+        param.requires_grad=True
+    grads_list={}
+    grads_list['fd_model']=[]
+    grads_list['logit']=[]
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         output = model.global_forward(data)
         loss = criterion(output, target)
         loss.backward()
+        for name,param in model.fd_model.named_parameters():
+            grads_list['fd_model'].append(param.grad.clone())
+        for name,param in model.logit.named_parameters():
+            grads_list['logit'].append(param.grad.clone())
         if(is_train):
             optimizer.zero_grad()
             optimizer.step()
@@ -62,9 +73,9 @@ def client_train(model:client_model, train_loader, optimizer, criterion, device,
     if(client_loss<model.best_loss) and (is_train):
         model.best_loss=client_loss
         torch.save(model.state_dict(),f'save/client_model_{client_id}_best.pth')
-    model.to('cpu')
-    criterion.to('cpu')
-    return client_loss,client_acc
+    model=model.to('cpu')
+    criterion=criterion.to('cpu')
+    return grads_list,client_loss,client_acc
 
 def personal_fit(model:client_model, train_loader, optimizer, criterion, device,client_id,is_train=True):
     model.train()

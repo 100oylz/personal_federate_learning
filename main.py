@@ -10,7 +10,7 @@ if __name__ == '__main__':
     iter_bar=tqdm(range(args.num_epochs))
     for i in iter_bar:
 
-        meta_loss,meta_acc,client_loss_dict,client_acc_dict=server.update()
+        meta_loss,meta_acc,client_loss_dict,client_acc_dict=server.update(args.outer_lr)
         print(f'epoch:{i},meta_loss:{meta_loss},meta_acc:{meta_acc}')
         iter_bar.update(1)
         print(client_loss_dict)

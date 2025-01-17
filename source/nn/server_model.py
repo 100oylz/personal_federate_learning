@@ -27,39 +27,27 @@ class server_model(nn.Module):
         x=torch.concat((x,x),dim=1)
         x=F.linear(x,params['logit.weight'],params['logit.bias'])
         return x
-    
-def params_merge(paramslist:list,name):
+
+
+
+def params_merge(model:nn.Module,paramslist:list,learning_rate:float):
     length=len(paramslist)
-    data=torch.empty_like(paramslist[0][name].data)
-    for i in range(length):
-        data.add_(paramslist[i][name].data)
-    data.div_(length)
-    return data
+    for client_param in paramslist:
+
+        for iter,(name,param) in enumerate(model.named_parameters()):
+            client_grad=client_param[iter]
+            param.data.sub_(client_grad*learning_rate/length)
     
-def server_load_params(model:server_model,params_list:list):
-    model.fd_model.conv1.conv2d.weight.data=params_merge(params_list,'fd_model.conv1.conv2d.weight')
-    model.fd_model.conv1.conv2d.bias.data=params_merge(params_list,'fd_model.conv1.conv2d.bias')
-    model.fd_model.conv1.bn.weight.data=params_merge(params_list,'fd_model.conv1.bn.weight')
-    model.fd_model.conv1.bn.bias.data=params_merge(params_list,'fd_model.conv1.bn.bias')
-    model.fd_model.conv2.conv2d.weight.data=params_merge(params_list,'fd_model.conv2.conv2d.weight')
-    model.fd_model.conv2.conv2d.bias.data=params_merge(params_list,'fd_model.conv2.conv2d.bias')
-    model.fd_model.conv2.bn.weight.data=params_merge(params_list,'fd_model.conv2.bn.weight')
-    model.fd_model.conv2.bn.bias.data=params_merge(params_list,'fd_model.conv2.bn.bias')
-    model.fd_model.conv3.conv2d.weight.data=params_merge(params_list,'fd_model.conv3.conv2d.weight')
-    model.fd_model.conv3.conv2d.bias.data=params_merge(params_list,'fd_model.conv3.conv2d.bias')
-    model.fd_model.conv3.bn.weight.data=params_merge(params_list,'fd_model.conv3.bn.weight')
-    model.fd_model.conv3.bn.bias.data=params_merge(params_list,'fd_model.conv3.bn.bias')
-    model.fd_model.conv4.conv2d.weight.data=params_merge(params_list,'fd_model.conv4.conv2d.weight')
-    model.fd_model.conv4.conv2d.bias.data=params_merge(params_list,'fd_model.conv4.conv2d.bias')
-    model.fd_model.conv4.bn.weight.data=params_merge(params_list,'fd_model.conv4.bn.weight')
-    model.fd_model.conv4.bn.bias.data=params_merge(params_list,'fd_model.conv4.bn.bias')
-    model.fd_model.conv5.conv2d.weight.data=params_merge(params_list,'fd_model.conv5.conv2d.weight')
-    model.fd_model.conv5.conv2d.bias.data=params_merge(params_list,'fd_model.conv5.conv2d.bias')
-    model.fd_model.conv5.bn.weight.data=params_merge(params_list,'fd_model.conv5.bn.weight')
-    model.fd_model.conv5.bn.bias.data=params_merge(params_list,'fd_model.conv5.bn.bias')
-    model.logit.weight.data=params_merge(params_list,'logit.weight')
-    
-def maml_train(model:server_model, data_loader, inner_step, inner_lr, optimizer,is_train=True):
+def server_load_params(model:server_model,params_list:list[dict[str,list[torch.Tensor]]],learning_rate:float,device):
+    model.to(device)
+    fd_model_list=[item['fd_model'] for item in params_list]
+    logit_list=[item['logit'] for item in params_list]
+    params_merge(model.fd_model,fd_model_list,learning_rate)
+    params_merge(model.logit,logit_list,learning_rate)
+    model.to('cpu')
+
+
+def maml_train(model:server_model, data_loader, inner_step, inner_lr, optimizer,device,is_train=True):
     """
     Train the model using MAML method.
     Args:
@@ -75,17 +63,25 @@ def maml_train(model:server_model, data_loader, inner_step, inner_lr, optimizer,
     """
     meta_loss = []
     meta_acc = []
+    torch.cuda.empty_cache()
+    model=model.to(device)
+    criterion=nn.CrossEntropyLoss()
+    criterion=criterion.to(device)
     for support_image, support_label, query_image, query_label in data_loader:
         support_image=torch.stack(support_image, dim=0)
         support_label=torch.stack(support_label, dim=0)
         query_image=torch.stack(query_image, dim=0)
         query_label=torch.stack(query_label, dim=0)
         fast_weights = collections.OrderedDict(model.named_parameters())
+        support_image=support_image.to(device)
+        support_label=support_label.to(device)
+        query_image=query_image.to(device)
+        query_label=query_label.to(device)
         for _ in range(inner_step):
             # Update weight
             support_logit = model.functional_forward(support_image, fast_weights)
             support_label=support_label.view(-1)
-            support_loss = nn.CrossEntropyLoss()(support_logit, support_label)
+            support_loss = criterion(support_logit, support_label)
             grads = torch.autograd.grad(support_loss, fast_weights.values(), create_graph=True)
             fast_weights = collections.OrderedDict((name, param - inner_lr * grad)
                                                    for ((name, param), grad) in zip(fast_weights.items(), grads))
@@ -94,11 +90,11 @@ def maml_train(model:server_model, data_loader, inner_step, inner_lr, optimizer,
         query_logit = model.functional_forward(query_image, fast_weights)
         query_prediction = torch.max(query_logit, dim=1)[1]
         query_label=query_label.view(-1)
-        query_loss = nn.CrossEntropyLoss()(query_logit, query_label)
+        query_loss = criterion(query_logit, query_label)
         query_acc = torch.eq(query_label, query_prediction).sum() / len(query_label)
 
         meta_loss.append(query_loss)
-        meta_acc.append(query_acc.data.numpy())
+        meta_acc.append(query_acc.item())
 
     # Zero the gradient
     optimizer.zero_grad()
@@ -108,16 +104,10 @@ def maml_train(model:server_model, data_loader, inner_step, inner_lr, optimizer,
     if is_train:
         meta_loss.backward()
         optimizer.step()
-
+    model=model.to('cpu')
+    criterion=criterion.to('cpu')
     return meta_loss, meta_acc
 
-    
-def GlobalUpdate(model:server_model,paramslist:list,support_images,support_labels,query_images,query_labels,inner_step,args,optimizer,is_train=True):
-    server_load_params(model,paramslist)
-    meta_loss=0
-    meta_acc=0
-    # meta_loss,meta_acc=maml_train(model,support_images,support_labels,query_images,query_labels,inner_step,args,optimizer,is_train)
-    return meta_loss,meta_acc
 
 
 if __name__=='__main__':

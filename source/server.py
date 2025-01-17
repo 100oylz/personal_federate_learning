@@ -28,6 +28,7 @@ class Server(BaseServer):
         self.get_maml_dataset(args)
         self.get_maml_data_loader(1)
         self.optimizer=torch.optim.Adam(self.model.parameters(),lr=args.outer_lr)
+        self.args=args
         for key,value in self.clients_dict.items():
             value.get_data(self.data_dict[key])
 
@@ -50,7 +51,7 @@ class Server(BaseServer):
     def get_maml_data_loader(self,batch_size):
         self.maml_dataloader=torch.utils.data.DataLoader(self.maml_dataset,batch_size=batch_size)
 
-    def update(self):
+    def update(self,lr):
         choose_num=random.choice(range(1,self.num_clients+1))
         client_choose_list=self.choose_client(choose_num)
         client_params_list=[]
@@ -60,15 +61,15 @@ class Server(BaseServer):
             client_load_params(item.model,self.model.named_parameters())
 
         for i in client_choose_list:
-            client_params,client_loss,client_acc=self.clients_dict[i].model_train(i)
-            client_params_list.append(collections.OrderedDict(client_params))
+            grads_list,client_loss,client_acc=self.clients_dict[i].model_train(i)
+
+            client_params_list.append(grads_list)
             client_loss_dict[i]=client_loss
             client_acc_dict[i]=client_acc
 
-        server_load_params(self.model,client_params_list)
-        meta_loss=0
-        meta_acc=0
-        # meta_loss,meta_acc=maml_train(self.model,self.maml_dataloader,self.inner_step,self.inner_lr,self.optimizer,is_train=True)
+        server_load_params(self.model,client_params_list,lr,self.args.device)
+
+        meta_loss,meta_acc=maml_train(self.model,self.maml_dataloader,self.inner_step,self.inner_lr,self.optimizer,self.args.device,is_train=True)
         if(meta_loss<self.model.best_loss):
             self.model.best_loss=meta_loss
             torch.save(self.model.state_dict(),'save/server_model_best.pth')
