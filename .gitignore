@@ -174,5 +174,5 @@ cython_debug/
 User-Config
 #############################################################################
 #Pytorch Neural Network Files
-save/*.pth
+*.pth
 
