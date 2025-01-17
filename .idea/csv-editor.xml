@@ -10,6 +10,20 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\log\iid_global_train.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\log\iid_personal_fit.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

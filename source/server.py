@@ -51,7 +51,7 @@ class Server(BaseServer):
     def get_maml_data_loader(self,batch_size):
         self.maml_dataloader=torch.utils.data.DataLoader(self.maml_dataset,batch_size=batch_size)
 
-    def update(self,lr):
+    def update(self,lr,file_path_base_name,code_value,mean,std):
         choose_num=random.choice(range(1,self.num_clients+1))
         client_choose_list=self.choose_client(choose_num)
         client_params_list=[]
@@ -61,7 +61,7 @@ class Server(BaseServer):
             client_load_params(item.model,self.model.named_parameters())
 
         for i in client_choose_list:
-            grads_list,client_loss,client_acc=self.clients_dict[i].model_train(i)
+            grads_list,client_loss,client_acc=self.clients_dict[i].model_train(i,file_path_base_name,code_value,mean,std)
 
             client_params_list.append(grads_list)
             client_loss_dict[i]=client_loss
@@ -72,17 +72,23 @@ class Server(BaseServer):
         meta_loss,meta_acc=maml_train(self.model,self.maml_dataloader,self.inner_step,self.inner_lr,self.optimizer,self.args.device,is_train=True)
         if(meta_loss<self.model.best_loss):
             self.model.best_loss=meta_loss
-            torch.save(self.model.state_dict(),'save/server_model_best.pth')
+            torch.save(self.model.state_dict(),file_path_base_name.format(code_value,'server_model'))
         return meta_loss,meta_acc,client_loss_dict,client_acc_dict
 
-    def client_personal_fit(self):
+    def client_personal_fit(self,path_base_name,code_value):
         client_loss_dict={}
         client_acc_dict={}
+
         for i in range(self.num_clients):
-            client_params,client_loss,client_acc=self.clients_dict[i].personal_fit(i)
+            client_params,client_loss,client_acc=self.clients_dict[i].personal_fit(i,path_base_name,code_value)
             client_loss_dict[i]=client_loss
             client_acc_dict[i]=client_acc
         return client_loss_dict,client_acc_dict
+
+    def init_personal_model(self):
+        for i in range(self.num_clients):
+            for value1,value2 in zip(self.clients_dict[i].model.fd_model.parameters(),self.clients_dict[i].model.personal_model.parameters()):
+                value2.data=value1.data.clone()
 
 
 

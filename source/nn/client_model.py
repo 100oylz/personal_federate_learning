@@ -35,7 +35,7 @@ class client_model(nn.Module):
         return x
 
 
-def client_train(model:client_model, train_loader, optimizer, criterion, device,client_id,is_train=True):
+def client_train(model:client_model, train_loader, optimizer, criterion, device,client_id,file_base_name,code_value,mean,std,is_train=True):
     model.train()
     model.personal_model.lock()
     model.fd_model.unlock()
@@ -57,9 +57,9 @@ def client_train(model:client_model, train_loader, optimizer, criterion, device,
         loss = criterion(output, target)
         loss.backward()
         for name,param in model.fd_model.named_parameters():
-            grads_list['fd_model'].append(param.grad.clone())
+            grads_list['fd_model'].append(add_gaussian_noise(param.grad.cpu().clone(),mean,std))
         for name,param in model.logit.named_parameters():
-            grads_list['logit'].append(param.grad.clone())
+            grads_list['logit'].append(add_gaussian_noise(param.grad.cpu().clone(),mean,std))
         if(is_train):
             optimizer.zero_grad()
             optimizer.step()
@@ -72,12 +72,12 @@ def client_train(model:client_model, train_loader, optimizer, criterion, device,
     client_acc=batch_acc/len(train_loader)
     if(client_loss<model.best_loss) and (is_train):
         model.best_loss=client_loss
-        torch.save(model.state_dict(),f'save/client_model_{client_id}_best.pth')
+        torch.save(model.state_dict(),file_base_name.format(code_value,f'client{client_id}'))
     model=model.to('cpu')
     criterion=criterion.to('cpu')
     return grads_list,client_loss,client_acc
 
-def personal_fit(model:client_model, train_loader, optimizer, criterion, device,client_id,is_train=True):
+def personal_fit(model:client_model, train_loader, optimizer, criterion, device,client_id,file_base_name,code_value,is_train=True):
     model.train()
     model.personal_model.unlock()
     model.fd_model.lock()
@@ -103,7 +103,7 @@ def personal_fit(model:client_model, train_loader, optimizer, criterion, device,
     client_acc=batch_acc/len(train_loader)
     if(client_loss<model.best_loss) and (is_train):
         model.best_loss=client_loss
-        torch.save(model.state_dict(),f'save/client_model_{client_id}_best.pth')
+        torch.save(model.state_dict(),file_base_name.format(code_value,f'client{client_id}'))
     model.to('cpu')
     criterion.to('cpu')
     return client_loss,client_acc
@@ -135,10 +135,11 @@ def client_load_params(model:client_model,params):
 
 
 
-def add_gaussian_noise(model, mean,std,device):
-    for param in model.parameters():
-        noise = torch.normal(mean,std,size=param.size()).to(device)
-        param.data.add_(noise)
+def add_gaussian_noise(grads, mean, std):
+
+    noise = torch.normal(mean, std, size=grads.size())
+    grads.add_(noise)
+    return grads
 
 
 if __name__=='__main__':

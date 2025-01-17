@@ -6,6 +6,7 @@ from .partition import *
 from torchvision.datasets import MNIST
 import torch
 import numpy as np
+import pandas as pd
 
 
 def get_path(dataset_name: str, code: PartitionCode):
@@ -109,3 +110,51 @@ def set_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+def save_global_train_to_csv(global_train_dict,path,num_clients,num_epochs):
+    clients_column=[]
+    for i in range(num_clients):
+        clients_column.append('client_'+str(i)+'_loss')
+        clients_column.append('client_'+str(i)+'_acc')
+    columns=['epoch']+clients_column+['meta_loss','meta_acc']
+    rows=[item for item in range(num_epochs)]
+    df=pd.DataFrame(columns=columns,index=rows)
+    for i in range(num_epochs):
+        df.loc[i,'epoch']=i
+    for key,value in global_train_dict.items():
+        if(key=='meta_loss' or key=='meta_acc'):
+            for item in value:
+                epoch,data=item
+                df.loc[epoch,key]=data
+        elif(key=='client_loss_dict'):
+            for client_id,item in value.items():
+                for epoch,data in item:
+                    df.loc[epoch,'client_'+str(client_id)+'_loss']=data
+        elif(key=='client_acc_dict'):
+            for client_id,item in value.items():
+                for epoch,data in item:
+                    df.loc[epoch,'client_'+str(client_id)+'_acc']=data
+
+    df.to_csv(path)
+
+def save_personal_fit_to_csv(personal_fit_dict,path,num_clients,num_epochs):
+    clients_column=[]
+    for i in range(num_clients):
+        clients_column.append('client_'+str(i)+'_loss')
+        clients_column.append('client_'+str(i)+'_acc')
+    columns=['epoch']+clients_column
+    rows=[item for item in range(num_epochs)]
+    df=pd.DataFrame(columns=columns,index=rows)
+    for i in range(num_epochs):
+        df.loc[i,'epoch']=i
+    for key,value in personal_fit_dict.items():
+        if(key=='client_loss_dict'):
+            for client_id,item in value.items():
+                for epoch,data in item:
+                    df.loc[epoch,'client_'+str(client_id)+'_loss']=data
+        elif(key=='client_acc_dict'):
+            for client_id,item in value.items():
+                for epoch,data in item:
+                    df.loc[epoch,'client_'+str(client_id)+'_acc']=data
+    df.to_csv(path)
+

@@ -41,14 +41,14 @@ class Client(BaseServer):
     def set_model(self,in_channel,num_features):
         self.model=client_model(in_channel,num_features)
 
-    def model_train(self,client_id):
+    def model_train(self,client_id,file_base_name,code_value,mean,std):
 
-        grads_list,client_loss,client_acc=client_train(self.model,self.train_loader,self.optimizer,self.criterion,self.args.device,client_id)
+        grads_list,client_loss,client_acc=client_train(self.model,self.train_loader,self.optimizer,self.criterion,self.args.device,client_id,file_base_name,code_value,mean,std)
 
         return grads_list,client_loss,client_acc
 
-    def personal_fit(self,client_id):
-        client_loss,client_acc=personal_fit(self.model,self.train_loader,self.optimizer,self.criterion,self.args.device,client_id)
+    def personal_fit(self,client_id,file_base_name,code_value):
+        client_loss,client_acc=personal_fit(self.model,self.train_loader,self.optimizer,self.criterion,self.args.device,client_id,file_base_name,code_value)
 
         return self.model.named_parameters(),client_loss,client_acc
 

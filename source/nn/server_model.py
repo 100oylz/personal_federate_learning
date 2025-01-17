@@ -39,12 +39,12 @@ def params_merge(model:nn.Module,paramslist:list,learning_rate:float):
             param.data.sub_(client_grad*learning_rate/length)
     
 def server_load_params(model:server_model,params_list:list[dict[str,list[torch.Tensor]]],learning_rate:float,device):
-    model.to(device)
+    model=model.to('cpu')
     fd_model_list=[item['fd_model'] for item in params_list]
     logit_list=[item['logit'] for item in params_list]
     params_merge(model.fd_model,fd_model_list,learning_rate)
     params_merge(model.logit,logit_list,learning_rate)
-    model.to('cpu')
+
 
 
 def maml_train(model:server_model, data_loader, inner_step, inner_lr, optimizer,device,is_train=True):
@@ -64,19 +64,15 @@ def maml_train(model:server_model, data_loader, inner_step, inner_lr, optimizer,
     meta_loss = []
     meta_acc = []
     torch.cuda.empty_cache()
-    model=model.to(device)
     criterion=nn.CrossEntropyLoss()
-    criterion=criterion.to(device)
+    model=model.to('cpu')
     for support_image, support_label, query_image, query_label in data_loader:
         support_image=torch.stack(support_image, dim=0)
         support_label=torch.stack(support_label, dim=0)
         query_image=torch.stack(query_image, dim=0)
         query_label=torch.stack(query_label, dim=0)
         fast_weights = collections.OrderedDict(model.named_parameters())
-        support_image=support_image.to(device)
-        support_label=support_label.to(device)
-        query_image=query_image.to(device)
-        query_label=query_label.to(device)
+
         for _ in range(inner_step):
             # Update weight
             support_logit = model.functional_forward(support_image, fast_weights)
