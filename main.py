@@ -45,7 +45,6 @@ if __name__ == '__main__':
         for (key1,value1),(key2,value2) in zip(client_loss_dict.items(),client_acc_dict.items()):
             global_train_dict['client_loss_dict'][key1].append((i,value1))
             global_train_dict['client_acc_dict'][key2].append((i,value2))
-        iter_bar.update(1)
     save_global_train_to_csv(global_train_dict,f'log/{save_code_value}_global_train.csv',args.num_clients,args.num_epochs)
     fit_bar=tqdm(range(args.fit_epochs))
     personal_fit_dict={}
@@ -54,7 +53,6 @@ if __name__ == '__main__':
     for i in range(args.num_clients):
         personal_fit_dict['client_loss_dict'][i]=[]
         personal_fit_dict['client_acc_dict'][i]=[]
-    server.init_personal_model()
     for i in fit_bar:
         fit_bar.set_description(f'Personal Fit epoch:{i}')
         client_loss_dict,client_acc_dict=server.client_personal_fit(save_pth_base_name,save_code_value)
@@ -63,7 +61,6 @@ if __name__ == '__main__':
         for (key1,value1),(key2,value2) in zip(client_loss_dict.items(),client_acc_dict.items()):
             personal_fit_dict['client_loss_dict'][key1].append((i,value1))
             personal_fit_dict['client_acc_dict'][key2].append((i,value2))
-        fit_bar.update(1)
     save_personal_fit_to_csv(personal_fit_dict,f'log/{save_code_value}_personal_fit.csv',args.num_clients,args.fit_epochs)
 
 

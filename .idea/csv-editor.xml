@@ -10,6 +10,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\log\MNIST_noniid-labeldir.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\log\iid_global_train.csv">
           <value>
             <Attribute>
@@ -18,6 +25,13 @@
           </value>
         </entry>
         <entry key="\log\iid_personal_fit.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\log\noniidlabel_personal_fit.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
