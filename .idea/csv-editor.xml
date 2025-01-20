@@ -10,7 +10,21 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\log\MNIST_noniid-#label.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\log\MNIST_noniid-labeldir.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\log\MNIST_unbalance.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -32,6 +46,13 @@
           </value>
         </entry>
         <entry key="\log\noniidlabel_personal_fit.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\log\unbalance_personal_fit.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

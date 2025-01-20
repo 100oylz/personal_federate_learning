@@ -1,6 +1,6 @@
 
 from .baseServer import BaseServer
-from source.nn.client_model import client_model,client_load_params,client_train,personal_fit
+from source.nn.client_model import client_model,client_load_params,client_train,personal_fit,client_model_test
 from sklearn.model_selection import train_test_split
 import torch
 from .utils.dataloader import BaseDataset
@@ -51,6 +51,10 @@ class Client(BaseServer):
         client_loss,client_acc=personal_fit(self.model,self.train_loader,self.optimizer,self.criterion,self.args.device,client_id,file_base_name,code_value)
 
         return self.model.named_parameters(),client_loss,client_acc
+
+    def test(self,client_id,file_base_name,code_value):
+        test_loss,test_acc=client_model_test(self.model,self.test_loader,self.criterion,self.args.device,client_id,file_base_name,code_value)
+        return test_loss,test_acc
 
 
 

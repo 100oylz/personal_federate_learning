@@ -141,6 +141,29 @@ def add_gaussian_noise(grads, mean, std):
     grads.add_(noise)
     return grads
 
+def client_model_test(model:client_model,data_loader,criterion,device,client_id,file_base_name,code_value):
+    file=file_base_name.format(code_value,f'client{client_id}')
+    state_dict=torch.load(file)
+    model.load_state_dict(state_dict)
+    model=model.to(device)
+    criterion=criterion.to(device)
+    client_loss=0
+    client_acc=0
+    for data,label in data_loader:
+        data=data.to(device)
+        label=label.to(device)
+        output=model(data)
+        loss=criterion(output,label)
+        predict=torch.max(output,dim=1)[1]
+        acc=torch.eq(predict,label).sum().item()/len(label)
+        client_loss+=loss.item()
+        client_acc+=acc
+    client_loss=client_loss/len(data_loader)
+    client_acc=client_acc/len(data_loader)
+    return client_loss,client_acc
+
+
+
 
 if __name__=='__main__':
     client=client_model(1,10)

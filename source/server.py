@@ -90,6 +90,10 @@ class Server(BaseServer):
             for value1,value2 in zip(self.clients_dict[i].model.fd_model.parameters(),self.clients_dict[i].model.personal_model.parameters()):
                 value2.data=value1.data.clone()
 
+    def client_test(self,i,file_base_name,code_value):
+        test_loss,test_acc=self.clients_dict[i].test(i,file_base_name,code_value)
+        return test_loss,test_acc
+
 
 
 
